@@ -83,14 +83,13 @@ def translate_state(state, catalog, repositories):
     nested_dict = lambda: collections.defaultdict(nested_dict)
     new_state = nested_dict()
 
-    for stream in catalog['streams']:
-        stream_name = stream['tap_stream_id']
+    for stream in catalog.streams:
+        stream_name = stream.tap_stream_id
         for repo in repositories:
             if bookmarks.get_bookmark(state, repo, stream_name):
                 return state
             if bookmarks.get_bookmark(state, stream_name, 'since'):
                 new_state['bookmarks'][repo][stream_name]['since'] = bookmarks.get_bookmark(state, stream_name, 'since')
-
     return new_state
 
 
@@ -169,10 +168,10 @@ def validate_dependencies(selected_stream_ids):
                 "To receive {0} data, you also need to select {1}.")
 
     if 'reviews' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
-        errs.append(msg_tmpl.format('reviews','pull_requests'))
+        errs.append(msg_tmpl.format('reviews', 'pull_requests'))
 
     if 'review_comments' in selected_stream_ids and 'pull_requests' not in selected_stream_ids:
-        errs.append(msg_tmpl.format('review_comments','pull_requests'))
+        errs.append(msg_tmpl.format('review_comments', 'pull_requests'))
 
     if errs:
         raise DependencyException(" ".join(errs))
@@ -612,7 +611,6 @@ def get_all_pull_requests(schemas, repo_path, state, mdata):
     """
     https://developer.github.com/v3/pulls/#list-pull-requests
     """
-
     bookmark_value = get_bookmark(state, repo_path, "pull_requests", "since")
     if bookmark_value:
         bookmark_time = singer.utils.strptime_to_utc(bookmark_value)
@@ -877,29 +875,25 @@ def get_all_stargazers(schema, repo_path, state, mdata):
     return state
 
 
+def stream_is_selected(mdata):
+    return mdata.get((), {}).get('selected', False)
+
+
 def get_selected_streams(catalog):
     """
     Gets selected streams.  Checks schema's 'selected'
-    first -- and then checks metadata, looking for an empty
-    breadcrumb and mdata with a 'selected' entry
     """
     selected_streams = []
-    for stream in catalog['streams']:
-        stream_metadata = stream['metadata']
-        if stream['schema'].get('selected', False):
-            selected_streams.append(stream['tap_stream_id'])
-        else:
-            for entry in stream_metadata:
-                # stream metadata will have empty breadcrumb
-                if not entry['breadcrumb'] and entry['metadata'].get('selected',None):
-                    selected_streams.append(stream['tap_stream_id'])
-
+    for stream in catalog.streams:
+        mdata = metadata.to_map(stream.metadata)
+        if stream_is_selected(mdata):
+            selected_streams.append(stream.tap_stream_id)
     return selected_streams
 
 
 def get_stream_from_catalog(stream_id, catalog):
-    for stream in catalog['streams']:
-        if stream['tap_stream_id'] == stream_id:
+    for stream in catalog.streams:
+        if stream.tap_stream_id == stream_id:
             return stream
     return None
 
@@ -945,10 +939,10 @@ def do_sync(config, state, catalog):
     #pylint: disable=too-many-nested-blocks
     for repo in repositories:
         logger.info("Starting sync of repository: %s", repo)
-        for stream in catalog['streams']:
-            stream_id = stream['tap_stream_id']
-            stream_schema = stream['schema']
-            mdata = stream['metadata']
+        for stream in catalog.streams:
+            stream_id = stream.tap_stream_id
+            stream_schema = stream.schema
+            mdata = stream.metadata
 
             # if it is a "sub_stream", it will be sync'd by its parent
             if not SYNC_FUNCTIONS.get(stream_id):
@@ -956,31 +950,27 @@ def do_sync(config, state, catalog):
 
             # if stream is selected, write schema and sync
             if stream_id in selected_stream_ids:
-                singer.write_schema(stream_id, stream_schema, stream['key_properties'])
-
+                singer.write_schema(stream_id, stream_schema.to_dict(), stream.key_properties)
                 # get sync function and any sub streams
                 sync_func = SYNC_FUNCTIONS[stream_id]
                 sub_stream_ids = SUB_STREAMS.get(stream_id, None)
-
                 # sync stream
                 if not sub_stream_ids:
                     state = sync_func(stream_schema, repo, state, mdata)
 
                 # handle streams with sub streams
                 else:
-                    stream_schemas = {stream_id: stream_schema}
+                    stream_schemas = {stream_id: stream_schema.to_dict()}
 
                     # get and write selected sub stream schemas
                     for sub_stream_id in sub_stream_ids:
                         if sub_stream_id in selected_stream_ids:
                             sub_stream = get_stream_from_catalog(sub_stream_id, catalog)
-                            stream_schemas[sub_stream_id] = sub_stream['schema']
-                            singer.write_schema(sub_stream_id, sub_stream['schema'],
-                                                sub_stream['key_properties'])
-
+                            stream_schemas[sub_stream_id] = sub_stream.schema.to_dict()
+                            singer.write_schema(sub_stream_id, sub_stream.schema,
+                                                sub_stream.key_properties)
                     # sync stream and it's sub streams
                     state = sync_func(stream_schemas, repo, state, mdata)
-
                 singer.write_state(state)
 
 
@@ -992,7 +982,7 @@ def main():
     if args.discover:
         do_discover()
     else:
-        catalog = args.properties if args.properties else get_catalog()
+        catalog = args.properties if args.properties else args.catalog if args.catalog else get_catalog()
         if 'api_endpoint' in args.config:
             github_api_endpoint = args.config['api_endpoint']
         do_sync(args.config, args.state, catalog)

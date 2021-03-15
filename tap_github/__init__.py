@@ -13,7 +13,7 @@ session = requests.Session()
 logger = singer.get_logger()
 github_api_endpoint = 'https://api.github.com'
 
-REQUIRED_CONFIG_KEYS = ['access_token', 'repository']
+REQUIRED_CONFIG_KEYS = ['access_token']
 
 KEY_PROPERTIES = {
     'commits': ['sha'],
@@ -875,6 +875,38 @@ def get_all_stargazers(schema, repo_path, state, mdata):
     return state
 
 
+def _get_all_organizations():
+    """
+    https://docs.github.com/en/rest/reference/orgs
+    """
+    organizations = []
+    for response in authed_get_all_pages(
+        'organizations',
+        '{}/organizations'.format(github_api_endpoint)
+    ):
+        orgs_resp = response.json()
+        for org in orgs_resp:
+            organizations.append(org['login'])
+    return organizations
+
+
+def _get_all_repositories(organizations=[]):
+    """
+    https://docs.github.com/en/rest/reference/repos
+    """
+    repositories = []
+    for organization in organizations:
+        for response in authed_get_all_pages(
+            'repos',
+            '{}/orgs/{}/repos'.format(github_api_endpoint, organization)
+        ):
+            repos_resp = response.json()
+            for repo in repos_resp:
+                logger.info(repo['full_name'])
+                repositories.append(repo['full_name'])
+    return repositories
+
+
 def stream_is_selected(mdata):
     return mdata.get((), {}).get('selected', False)
 
@@ -931,7 +963,16 @@ def do_sync(config, state, catalog):
     selected_stream_ids = get_selected_streams(catalog)
     validate_dependencies(selected_stream_ids)
 
-    repositories = list(filter(None, config['repository'].split(' ')))
+    if 'repository' in config:
+        logger.info("Fetching from repositories specified in config.")
+        repositories = list(filter(None, config['repository'].split(' ')))
+    elif 'organization' in config:
+        logger.info("Fetching all repositories from organization(s) specified in config.")
+        organizations = list(filter(None, config['organization'].split(' ')))
+        repositories = _get_all_repositories(organizations)
+    else:
+        logger.info("No repository/organization was specified in config. Fetching all repositories from all organizations.")
+        repositories = _get_all_repositories(_get_all_organizations())
 
     state = translate_state(state, catalog, repositories)
     singer.write_state(state)

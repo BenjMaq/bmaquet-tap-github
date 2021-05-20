@@ -1,4 +1,4 @@
-# tap-github
+# bmaquet-tap-github
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted
 data from the GitHub API following the [Singer
@@ -40,14 +40,31 @@ This tap:
 
 3. Create the config file
 
-    Create a JSON file containing the access token you just created
-    and the path to one or multiple repositories that you want to extract data from. Each repo path should be space delimited. The repo path is relative to
-    `https://github.com/`. For example the path for this repository is
-    `singer-io/tap-github`. 
+    Create a JSON file containing the access token you just created and specify which repository/organization you want to fetch:
+    - If repository is specified in config, the tap will only fetch this specific repo
+    - If organization is specified in config, the tap will fetch all repo's from this organization
+    - If neither repository nor organization is specified in config, the tap will fetch all repo's from all organizations available
+    
+    Each repo path should be space delimited. The repo path is relative to your API endpoint (default is `https://github.com/`). For example the path for this repository is
+    `BenjMaq/bmaquet-tap-github`. 
 
+    e.g. 
+    
+    To fetch all repos from all available organizations:
     ```json
+    {"access_token": "your-access-token"}
+    ```
+   
+   To fetch all repos from a specific organization:
+   ```json
     {"access_token": "your-access-token",
-     "repository": "singer-io/tap-github singer-io/getting-started"}
+     "organization": "BenjMaq"}
+    ```
+   
+   To fetch a specific or a few specific repo's:
+   ```json
+    {"access_token": "your-access-token",
+     "repository": "BenjMaq/bmaquet-tap-github BenjMaq/another-repo"}
     ```
 4. Run the tap in discovery mode to get properties.json file
 

@@ -6,4 +6,4 @@
   * Enable fetching repos and organizations dynamically. See ReadMe for more details
  
 ## 1.0.0
-  * This is a fork of https://github.com/singer-io/tap-pagerduty v1.9.1.
+  * This is a fork of https://github.com/singer-io/tap-github v1.9.1.

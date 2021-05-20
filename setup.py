@@ -2,11 +2,11 @@
 
 from setuptools import setup, find_packages
 
-setup(name='tap-github',
-      version='1.9.1',
+setup(name='bmaquet-tap-github',
+      version='1.0.1',
+      url='https://github.com/BenjMaq/bmaquet-tap-github',
       description='Singer.io tap for extracting data from the GitHub API',
       author='Stitch',
-      url='http://singer.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_github'],
       install_requires=[

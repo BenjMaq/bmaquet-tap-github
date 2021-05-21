@@ -902,7 +902,6 @@ def _get_all_repositories(organizations=[]):
         ):
             repos_resp = response.json()
             for repo in repos_resp:
-                logger.info(repo['full_name'])
                 repositories.append(repo['full_name'])
     return repositories
 

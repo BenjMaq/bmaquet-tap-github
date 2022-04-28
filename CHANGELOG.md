@@ -1,5 +1,7 @@
 # Changelog
 
+## 1.0.2
+  * Remove logging statements 
 ## 1.0.1
   * Enable passing a Github Enterprise endpoint in config using api_endpoint, instead of relying on the public endpoint
   * Update to python syntax

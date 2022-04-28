@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='bmaquet-tap-github',
-      version='1.0.1',
+      version='1.0.2',
       url='https://github.com/BenjMaq/bmaquet-tap-github',
       description='Singer.io tap for extracting data from the GitHub API',
       author='Stitch',
